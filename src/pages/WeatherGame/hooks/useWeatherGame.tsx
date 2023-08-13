@@ -1,64 +1,32 @@
 import cities, { City } from 'cities.json';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { message } from 'antd';
 import type { GameStep } from '../WeatherGame.types';
-import { generateRandomInt } from '@/utils';
-import {
-  StyledButton,
-  StyledInputNumber,
-  StyledParagraph,
-} from '../WeatherGame.styles';
+import { getRandomCities, generateStatueses } from '@/utils';
+import { StyledParagraph } from '../WeatherGame.styles';
 import { useLazyGetCurrentWeatherQuery } from '@/api/weather';
 
 const STEPS_NUMBER = 5;
+const MAX_MISTAKES_NUMBER = 3;
 const OVERSIGHT = 5;
 
-const getRandomCities: (array: City[], count: number) => any[] = (
-  array,
-  count
-) => {
-  const randomIndexes: number[] = [];
-
-  while (randomIndexes.length < count) {
-    const randomIndex = generateRandomInt(0, array.length);
-    if (!randomIndexes.includes(randomIndex)) {
-      randomIndexes.push(randomIndex);
-    }
-  }
-
-  return randomIndexes.map((index) => array[index]);
-};
-
-const generateStatueses = (
-  status: GameStep['status'],
-  count: number
-): GameStep['status'][] => {
-  const statuses: GameStep['status'][] = [];
-  for (let i = 0; i < count; i++) {
-    statuses.push(status);
-  }
-  return statuses;
-};
-
 const useWeatherGame = () => {
+  const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [stepStatuses, setStepStatuses] = useState<GameStep['status'][]>(
     generateStatueses('wait', STEPS_NUMBER)
   );
-  const [isResultDisplayed, setResultDisplayedStatus] =
-    useState<boolean>(false);
   const [getCurrentWeather] = useLazyGetCurrentWeatherQuery();
-  const [temperature, setTemperature] = useState(0);
-  const [gameResult, setGameResult] = useState({
-    mistakes: 0,
-    total: STEPS_NUMBER,
-  });
+  const [temperature, setTemperature] = useState<number | null>(null);
+  const [mistakes, setMistakes] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
 
   const randomCities = useMemo(() => getRandomCities(cities, STEPS_NUMBER), []);
 
-  const handleTemperatureChange = (temp: number) => setTemperature(temp);
-
   const setCurrentStepStatus = useCallback(
     (status: GameStep['status']) => {
+      if (status === 'error') {
+        setMistakes((prev) => prev + 1);
+      }
       setStepStatuses((prevState) => {
         prevState[currentStep] = status;
         return [...prevState];
@@ -67,34 +35,45 @@ const useWeatherGame = () => {
     [currentStep]
   );
 
+  const displayAnswerResult = useCallback(() => {
+    if (currentStep + 1 < STEPS_NUMBER) {
+      setCurrentStep((prev) => prev + 1);
+    } else {
+      setIsGameOver(true);
+    }
+  }, [currentStep]);
+
   const handleCheckTemperature = useCallback(async () => {
-    const city = randomCities[currentStep];
+    const { lat, lng, name } = randomCities[currentStep];
     const { data } = await getCurrentWeather({
-      lat: city.lat,
-      lon: city.lng,
+      lat,
+      lon: lng,
       units: 'metric',
     });
 
-    if (data) {
-      if (Math.abs(data.main.temp - temperature) < OVERSIGHT) {
+    if (data && temperature) {
+      const { main } = data;
+
+      if (Math.abs(main.temp - temperature) < OVERSIGHT) {
         setCurrentStepStatus('finish');
+        message.success(
+          `Your answer is very close! The temperature in ${name} is ${main.temp} °C`
+        );
       } else {
         setCurrentStepStatus('error');
+        message.error(
+          `Sorry but your answer is not even close! The temperature in ${name} is ${main.temp} °C`
+        );
       }
-
-      setResultDisplayedStatus(true);
-      setTimeout(() => {
-        setResultDisplayedStatus(false);
-        if (currentStep + 1 < STEPS_NUMBER) {
-          setCurrentStep((prevStep) => prevStep + 1);
-        }
-      }, 3000);
+      setTemperature(null);
+      displayAnswerResult();
     }
   }, [
     randomCities,
     currentStep,
     getCurrentWeather,
     temperature,
+    displayAnswerResult,
     setCurrentStepStatus,
   ]);
 
@@ -113,12 +92,21 @@ const useWeatherGame = () => {
     [randomCities, stepStatuses]
   );
 
+  const startOver = () => {
+    setCurrentStep(0);
+    setMistakes(0);
+    setIsGameOver(false);
+    setStepStatuses(generateStatueses('wait', STEPS_NUMBER));
+  };
+
   return {
     steps,
+    isUserWin: mistakes < MAX_MISTAKES_NUMBER,
+    isGameOver,
     temperature,
-    isResultDisplayed,
     handleCheckTemperature,
-    handleTemperatureChange,
+    setTemperature,
+    startOver,
     currentStep,
   };
 };

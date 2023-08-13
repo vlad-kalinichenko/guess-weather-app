@@ -1,4 +1,4 @@
-import { Button, InputNumber, Layout, Row } from 'antd';
+import { Button, Layout, Row } from 'antd';
 import Paragraph from 'antd/es/typography/Paragraph';
 import { styled } from 'styled-components';
 
@@ -27,10 +27,6 @@ export const StyledRow = styled(Row)`
   padding: 20px 0px;
   background-color: #f1f0e8;
   flex-grow: 1;
-`;
-
-export const StyledInputNumber = styled(InputNumber)`
-  width: 100%;
 `;
 
 export const StyledButton = styled(Button)`
