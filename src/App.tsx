@@ -1,10 +1,10 @@
 import { Route, Routes, BrowserRouter } from 'react-router-dom';
-import { NotFound, PostList } from '@/pages';
+import { NotFound, WeatherGame } from '@/pages';
 
 const App = (): JSX.Element => (
   <BrowserRouter>
     <Routes>
-      <Route path="/" element={<PostList />} />
+      <Route path="/" element={<WeatherGame />} />
       <Route path="/*" element={<NotFound />} />
     </Routes>
   </BrowserRouter>

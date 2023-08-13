@@ -31,6 +31,6 @@
       "selectors/*": ["./src/selectors/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "cities.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

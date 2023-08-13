@@ -1,1 +1,3 @@
-export enum TAG { }
+export enum TAG {
+  CURRENT_WEATHER = 'CurrentWeather',
+}
